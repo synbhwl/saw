@@ -29,7 +29,3 @@ https://saw-production.up.railway.app/make?topic=Photosynthesis
 ```
 
 You will receive a clean HTML page with markdown-style content based on your input.
-
-### Source Code
-
-GitHub Repository: [https://github.com/synbhwl/saw](https://github.com/synbhwl/saw)
