@@ -13,9 +13,12 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 load_dotenv()
-api_key = os.getenv('GROQ_API_KEY')
+api_key = os.getenv('GROQ_API_KEY').strip() # adding the strip() after the server stopped working
+# just because i had a tailing newline after the key
 debug = os.getenv('DEBUG') == "true"
 model = ('llama-3.1-8b-instant' if debug else 'llama-3.3-70b-versatile')
+# current even in production i am keeping the model as 'instant' simply because
+# it works well and has a better request limit
 
 app = FastAPI()
 
@@ -25,7 +28,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 client = Groq(api_key=api_key)
 
-
+# this is the home route and it's basically a readme typa thing
+# i am using jinja2 to fill the placeholders
 @app.get('/')
 async def show_home():
     try:
@@ -37,12 +41,14 @@ async def show_home():
         full_html = html_template.render(content=content_formatted)
     except Exception:
         raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="you did nothing wrong, my app just can't read some files"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="you did nothing wrong, my app just can't read some files"
         )
     return HTMLResponse(content=full_html)
 
-
+# this is a monolith route, i know
+# but there aren't many repeated logic for much generalization
+# the ones that are, i kept them for explicitness, it's a very small app afterall
 @app.get("/make")
 @limiter.limit("2/minute")
 async def make_assignment(
@@ -56,13 +62,13 @@ async def make_assignment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Oops! you forgot to add the topic. eg: my_url/make?topic=something"
         )
-    
+
     if len(topic) > 1000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="My God, that's a long ass topic. Please tone it down"
         )
-    
+
     if words and words > 3000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -72,7 +78,7 @@ async def make_assignment(
     if tone and len(tone) > 100:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="My God, word limit too high. Please keep it atleast less than 5000, ideally less tan 3000"
+            detail="My God, never seen such a lengthy tone. Please tone it down to less than 100 characters"
         )
 
     if words:
@@ -88,7 +94,7 @@ async def make_assignment(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="you did nothing wrong, my app just can't read some files"
             )
-   
+
     prompt = template.render(
         topic=topic,
         words=words,
@@ -101,7 +107,8 @@ async def make_assignment(
             messages=[{'role': 'user', 'content': prompt}]
         )
         content_raw = response.choices[0].message.content.strip()
-        content_unformatted = content_raw.encode('utf8').decode('unicode_escape')
+        content_unformatted = content_raw.encode(
+            'utf8').decode('unicode_escape')
         content_final = markdown.markdown(content_unformatted)
 
         with open('docs/template.html', 'r') as ft:
