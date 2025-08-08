@@ -14,10 +14,10 @@ from slowapi.errors import RateLimitExceeded
 
 load_dotenv()
 api_key = os.getenv('GROQ_API_KEY').strip() # adding the strip() after the server stopped working
-# just because i had a tailing newline after the key
+# because i had a tailing newline after the key
 debug = os.getenv('DEBUG') == "true"
 model = ('llama-3.1-8b-instant' if debug else 'llama-3.3-70b-versatile')
-# current even in production i am keeping the model as 'instant' simply because
+# current even in production i am keeping the model as 'instant' because
 # it works well and has a better request limit
 
 app = FastAPI()
@@ -28,8 +28,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 client = Groq(api_key=api_key)
 
-# this is the home route and it's basically a readme typa thing
-# i am using jinja2 to fill the placeholders
+
 @app.get('/')
 async def show_home():
     try:
@@ -39,16 +38,15 @@ async def show_home():
         with open('docs/template.html', 'r') as ft:
             html_template = Template(ft.read())
         full_html = html_template.render(content=content_formatted)
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="you did nothing wrong, my app just can't read some files"
+            detail=f"error: file read error: {str(e)}"
         )
     return HTMLResponse(content=full_html)
 
-# this is a monolith route, i know
-# but there aren't many repeated logic for much generalization
-# the ones that are, i kept them for explicitness, it's a very small app afterall
+# may refactor the monolithic route into different functions
+# keeping it currently because they are mostly non repetitive and only one main route exists 
 @app.get("/make")
 @limiter.limit("2/minute")
 async def make_assignment(
@@ -60,25 +58,25 @@ async def make_assignment(
     if not topic:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Oops! you forgot to add the topic. eg: my_url/make?topic=something"
+            detail="error: topic missing in query params. eg: https://saw-production.up.railway.app/make?topic=something"
         )
 
     if len(topic) > 1000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="My God, that's a long ass topic. Please tone it down"
+            detail="error: topic too long, keep it under 100 characters."
         )
 
     if words and words > 3000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="My God, word limit too high. Please keep it less tan 3000"
+            detail="error: word count too high, keep it under 3000 words."
         )
 
     if tone and len(tone) > 100:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="My God, never seen such a lengthy tone. Please tone it down to less than 100 characters"
+            detail="error: tone too long, keep it under 100 characters"
         )
 
     if words:
@@ -89,10 +87,10 @@ async def make_assignment(
             if words >= 1500 and words <= 3000:
                 with open('docs/ab1500.txt', 'r') as f:
                     template = Template(f.read())
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="you did nothing wrong, my app just can't read some files"
+                detail=f"error: file read error: {str(e)}"
             )
 
     prompt = template.render(
@@ -118,7 +116,7 @@ async def make_assignment(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f'something went wrong :( -> {str(e)}'
+            detail=f'error: error while fetching response from LLM: {str(e)}'
         )
 
     return HTMLResponse(content=full_html)
