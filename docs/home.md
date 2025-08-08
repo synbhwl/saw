@@ -10,6 +10,7 @@ To use the app, open the URL in your browser and add query parameters directly i
 
 
 Here:
+
 - topic=You+topic+here is a **mendatory** parameter. Replace the example with your own topic.
 - words=500 is an **optional** parameter. You can choose not to write this and stick with the default 500 words.
 - tone=academic is also an **optional** parameter. You can stick with the default 'natural academic'
