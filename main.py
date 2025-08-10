@@ -48,7 +48,7 @@ async def show_home():
 # may refactor the monolithic route into different functions
 # keeping it currently because they are mostly non repetitive and only one main route exists 
 @app.get("/make")
-@limiter.limit("2/minute")
+@limiter.limit("5/minute")
 async def make_assignment(
     request: Request,
     topic: Optional[str] = None,
